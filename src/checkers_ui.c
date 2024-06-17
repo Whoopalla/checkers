@@ -26,7 +26,7 @@ uint32_t piece_dest = 0;
 
 void draw_board(void) {
   Color cell_color = BLACK_CELL_COLOR;
-  uint32_t wp, bp, wm, bm, k, bitm;
+  uint32_t wp, bp, wm, bm, wj, bj, k, bitm;
   wp = game.wp;
   bp = game.bp;
   k = game.k;
@@ -39,19 +39,19 @@ void draw_board(void) {
     bm = get_black_movers(&game);
     wm = 0;
   }
+
   wm = get_white_movers(&game);
   bm = get_black_movers(&game);
-  printf("movers: \n");
-  PRINT_BITS(uint32_t, wm);
-  PRINT_BITS(uint32_t, bm);
+  wj = get_white_jumpers(&game);
+  //bj = get_black_jumpers(&game);
 
   for (int y = WIDTH - 100; y >= 0; y -= CELL_SIZE) {
     for (size_t x = 0; x < HEIGHT; x += CELL_SIZE) {
       DrawRectangle(x, y, CELL_SIZE, CELL_SIZE, cell_color);
-      char *pos = malloc(100);
-      sprintf(pos, "x: %d\n y: %d", x, y);
-      DrawText(pos, x, y, 20, RED);
-      free(pos);
+      //char *pos = malloc(100);
+      //sprintf(pos, "x: %d\n y: %d", x, y);
+      //DrawText(pos, x, y, 20, RED);
+      //free(pos);
       if (selected_piece != 0 && (selected_piece & bitm) &&
           ColorIsEqual(cell_color, BLACK_CELL_COLOR)) {
         DrawRectangleLines(x, y, CELL_SIZE, CELL_SIZE, YELLOW);
@@ -67,12 +67,18 @@ void draw_board(void) {
           if (wm & bitm) {
             DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, GREEN);
           }
+          if (wj & bitm) {
+            DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, RED);
+          }
         }
         if (bp & bitm) {
           DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 40, BLACK_P_COLOR);
           if (bm & bitm) {
             DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, GREEN);
           }
+          //if (bj & bitm) {
+          //  DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, RED);
+          //}
         }
         bitm = bitm << 1;
       }

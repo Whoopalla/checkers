@@ -71,7 +71,6 @@ static void masks_init() {
 
 void checkers_init(void) { masks_init(); }
 
-// TODO: Not showing white movers with epmty cell on the left
 uint32_t get_white_movers(Game *g) {
   const uint32_t nocc = ~(g->wp | g->bp);
   const uint32_t wk = g->wp & g->k;
@@ -103,24 +102,24 @@ uint32_t get_black_movers(Game *g) {
 uint32_t get_white_jumpers(Game *g) {
   const uint32_t nooc = ~(g->wp | g->bp);
   const uint32_t wk = g->wp & g->k;
-  uint32_t movers = 0;
+  uint32_t jumpers = 0;
   uint32_t temp = (nooc << 4) & g->bp;
   if (temp) {
-    movers |= (((temp & mask_l3 << 3) | ((temp & mask_l5) << 5))) & g->wp;
+    jumpers |= (((temp & mask_l3) << 3) | ((temp & mask_l5) << 5)) & g->wp;
   }
   temp = (((nooc & mask_l3) << 3) | ((nooc & mask_l5) << 5)) & g->bp;
-  movers |= (temp << 4) & g->wp;
+  jumpers |= (temp << 4) & g->wp;
   if (wk) {
     temp = (nooc >> 4) & g->bp;
     if (temp) {
-      movers |= (((temp & mask_r3) >> 3) | ((temp & mask_r5) >> 5)) & wk;
+      jumpers |= (((temp & mask_r3) >> 3) | ((temp & mask_r5) >> 5)) & wk;
     }
     temp = (((nooc & mask_r3) >> 3) | ((nooc & mask_r5) >> 5)) & g->bp;
     if (temp) {
-      movers |= (temp >> 4) & wk;
+      jumpers |= (temp >> 4) & wk;
     }
   }
-  return movers;
+  return jumpers;
 }
 
 void move(Game *g, uint32_t s, uint32_t d) {
