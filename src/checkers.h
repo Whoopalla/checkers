@@ -17,6 +17,6 @@ uint32_t get_white_movers(struct game *g);
 uint32_t get_black_movers(struct game *g);
 uint32_t get_white_jumpers(struct game *g);
 uint32_t get_black_jumpers(struct game *g);
-void move(struct game *g, uint32_t s, uint32_t d);
+bool move(struct game *g, uint32_t s, uint32_t d);
 
 void init(void);

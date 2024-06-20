@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define DEBUG_MODE 0
+#define NUM_DIAG 13
+
 void print_masks();
 
 #define PRINT_BOARD(V)                                                         \
@@ -35,6 +38,8 @@ void print_board(char *val, unsigned char *bytes, size_t num_bytes) {
 
 static uint32_t mask_l3, mask_l5, mask_r3, mask_r5;
 static uint32_t s[32];
+
+static uint32_t diagonals[NUM_DIAG];
 
 /*
    28  29  30  31
@@ -67,6 +72,21 @@ static void masks_init() {
             s[14] | s[4] | s[5] | s[6];
   mask_r5 =
       s[25] | s[26] | s[27] | s[17] | s[18] | s[19] | s[9] | s[10] | s[11];
+
+  diagonals[0] = s[1] | s[4] | s[8];
+  diagonals[1] = s[2] | s[5] | s[9] | s[12] | s[16];
+  diagonals[2] = s[3] | s[6] | s[10] | s[13] | s[17] | s[20] | s[24];
+  diagonals[3] = s[7] | s[11] | s[14] | s[18] | s[21] | s[25] | s[28];
+  diagonals[4] = s[15] | s[19] | s[22] | s[26] | s[29];
+  diagonals[5] = s[23] | s[27] | s[30];
+
+  diagonals[6] = s[3] | s[7];
+  diagonals[7] = s[2] | s[6] | s[11] | s[15];
+  diagonals[8] = s[1] | s[5] | s[10] | s[14] | s[19] | s[23];
+  diagonals[9] = s[0] | s[4] | s[9] | s[13] | s[18] | s[22] | s[27] | s[31];
+  diagonals[10] = s[8] | s[12] | s[17] | s[21] | s[26] | s[30];
+  diagonals[11] = s[16] | s[20] | s[25] | s[29];
+  diagonals[12] = s[24] | s[28];
 }
 
 void checkers_init(void) { masks_init(); }
@@ -122,16 +142,56 @@ uint32_t get_white_jumpers(Game *g) {
   return jumpers;
 }
 
-void move(Game *g, uint32_t s, uint32_t d) {
-  assert(g->wp & s || g->bp & s && "Empty cell move");
-  if (g->wp & s) {
-    g->wp ^= s;
-    g->wp |= d;
-  } else if (g->bp & s) {
-    g->bp ^= s;
-    g->bp |= d;
+bool move(Game *g, uint32_t s, uint32_t d) {
+  if (!DEBUG_MODE) {
+    const uint32_t nooc = ~(g->wp | g->bp);
+    if (!(nooc & d)) {
+      return false;
+    }
+    if (g->white_move && s & get_white_movers(g)) {
+      const uint32_t wk = g->wp & g->k;
+      if (wk & s) {
+        // king move
+        for (size_t i = 0; i < 13; i++) {
+        }
+      } else {
+        if (((d << 4) & s) || (((d & mask_l3) << 3) & s) ||
+            (((d & mask_l5) << 5) & s)) {
+          g->wp ^= s;
+          g->wp |= d;
+        } else {
+          return false;
+        }
+      }
+    } else if (!g->white_move && g->bp & s) {
+      const uint32_t bk = g->bp & g->k;
+      if (bk & s) {
+        // TODO: king move
+      } else {
+        if (((d >> 4) & s) || (((d & mask_r3) >> 3) & s) ||
+            (((d & mask_r5) >> 5) & s)) {
+          g->bp ^= s;
+          g->bp |= d;
+        } else {
+          return false;
+        }
+      }
+    } else {
+      return false;
+    }
+    g->white_move = !g->white_move;
+    return true;
+  } else {
+    assert(g->wp & s || g->bp & s && "Empty cell move");
+    if (g->wp & s) {
+      g->wp ^= s;
+      g->wp |= d;
+    } else if (g->bp & s) {
+      g->bp ^= s;
+      g->bp |= d;
+    }
+    PRINT_BOARD(htonl(g->bp) | htonl(g->wp));
   }
-  PRINT_BOARD(htonl(g->bp) | htonl(g->wp));
 }
 
 void print_masks() {
