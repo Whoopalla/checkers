@@ -43,15 +43,15 @@ void draw_board(void) {
   wm = get_white_movers(&game);
   bm = get_black_movers(&game);
   wj = get_white_jumpers(&game);
-  //bj = get_black_jumpers(&game);
+  // bj = get_black_jumpers(&game);
 
   for (int y = WIDTH - 100; y >= 0; y -= CELL_SIZE) {
     for (size_t x = 0; x < HEIGHT; x += CELL_SIZE) {
       DrawRectangle(x, y, CELL_SIZE, CELL_SIZE, cell_color);
-      //char *pos = malloc(100);
-      //sprintf(pos, "x: %d\n y: %d", x, y);
-      //DrawText(pos, x, y, 20, RED);
-      //free(pos);
+      // char *pos = malloc(100);
+      // sprintf(pos, "x: %d\n y: %d", x, y);
+      // DrawText(pos, x, y, 20, RED);
+      // free(pos);
       if (selected_piece != 0 && (selected_piece & bitm) &&
           ColorIsEqual(cell_color, BLACK_CELL_COLOR)) {
         DrawRectangleLines(x, y, CELL_SIZE, CELL_SIZE, YELLOW);
@@ -76,9 +76,9 @@ void draw_board(void) {
           if (bm & bitm) {
             DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, GREEN);
           }
-          //if (bj & bitm) {
-          //  DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, RED);
-          //}
+          // if (bj & bitm) {
+          //   DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, RED);
+          // }
         }
         bitm = bitm << 1;
       }
@@ -106,19 +106,20 @@ void get_input(void) {
       uint32_t shift =
           ((int)mouse.x / CELL_SIZE) / 2 + 4 * (7 - (int)mouse.y / CELL_SIZE);
       selected_piece = 1 << shift;
+      if ((selected_piece & (~(game.wp | game.bp)))) {
+        selected_piece = 0;
+      }
     } else {
       uint32_t shift =
           ((int)mouse.x / CELL_SIZE) / 2 + 4 * (7 - (int)mouse.y / CELL_SIZE);
       piece_dest = 1 << shift;
-      printf("Shift: %d\n", shift);
+      if ((piece_dest & (~(game.wp | game.bp))) == 0) {
+        selected_piece = 0;
+      }
       move(&game, selected_piece, piece_dest);
-      // PRINT_BITS(uint32_t, selected_piece);
-      printf(" - selected\n");
-      // PRINT_BITS(uint32_t, piece_dest);
-      printf(" - dest\n");
       selected_piece = 0;
       piece_dest = 0;
-      PRINT_BITS(uint32_t, game.wp | game.bp);
+      // PRINT_BITS(uint32_t, game.wp | game.bp);
     }
   }
 }

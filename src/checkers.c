@@ -53,9 +53,9 @@ static uint32_t diagonals[NUM_DIAG];
 */
 
 void new_game(Game *game) {
-  game->wp = (0x6FF00000);
-  game->bp = (0x00000FFE);
-  game->k = 0;
+  game->wp = (0x60000000);
+  game->bp = (0x00000000);
+  game->k = 0x60000000;
   game->white_move = true;
   game->game_over = false;
 }
@@ -87,6 +87,11 @@ static void masks_init() {
   diagonals[10] = s[8] | s[12] | s[17] | s[21] | s[26] | s[30];
   diagonals[11] = s[16] | s[20] | s[25] | s[29];
   diagonals[12] = s[24] | s[28];
+
+  printf("diagonals: \n");
+  for (size_t i = 0; i < NUM_DIAG; i++) {
+    PRINT_BITS(uint32_t, diagonals[i]);
+  }
 }
 
 void checkers_init(void) { masks_init(); }
@@ -143,55 +148,89 @@ uint32_t get_white_jumpers(Game *g) {
 }
 
 bool move(Game *g, uint32_t s, uint32_t d) {
-  if (!DEBUG_MODE) {
-    const uint32_t nooc = ~(g->wp | g->bp);
-    if (!(nooc & d)) {
-      return false;
-    }
-    if (g->white_move && s & get_white_movers(g)) {
-      const uint32_t wk = g->wp & g->k;
-      if (wk & s) {
-        // king move
-        for (size_t i = 0; i < 13; i++) {
-        }
-      } else {
-        if (((d << 4) & s) || (((d & mask_l3) << 3) & s) ||
-            (((d & mask_l5) << 5) & s)) {
-          g->wp ^= s;
-          g->wp |= d;
-        } else {
-          return false;
-        }
-      }
-    } else if (!g->white_move && g->bp & s) {
-      const uint32_t bk = g->bp & g->k;
-      if (bk & s) {
-        // TODO: king move
-      } else {
-        if (((d >> 4) & s) || (((d & mask_r3) >> 3) & s) ||
-            (((d & mask_r5) >> 5) & s)) {
-          g->bp ^= s;
-          g->bp |= d;
-        } else {
-          return false;
-        }
-      }
-    } else {
-      return false;
-    }
-    g->white_move = !g->white_move;
-    return true;
-  } else {
-    assert(g->wp & s || g->bp & s && "Empty cell move");
-    if (g->wp & s) {
-      g->wp ^= s;
-      g->wp |= d;
-    } else if (g->bp & s) {
-      g->bp ^= s;
-      g->bp |= d;
-    }
-    PRINT_BOARD(htonl(g->bp) | htonl(g->wp));
+  const uint32_t nooc = ~(g->wp | g->bp);
+  if (!(nooc & d)) {
+    printf("Incorrect destination seleceted\n");
+    return false;
   }
+  if ((g->white_move && (s & get_white_movers(g)) == 0) ||
+      (!g->white_move && (s & get_black_movers(g)) == 0)) {
+    printf("Incorrect piece seleceted\n");
+    return false;
+  }
+  // King move
+  if (s & g->k) {
+    // King's pown move
+    if (((d << 4) & s) || (((d & mask_l3) << 3) & s) ||
+        (((d & mask_l5) << 5) & s || ((d >> 4) & s) ||
+         (((d & mask_r3) >> 3) & s) || (((d & mask_r5) >> 5) & s))) {
+      if (s & g->wp) {
+        g->wp ^= s;
+        g->wp |= d;
+      } else {
+        g->bp ^= s;
+        g->bp |= d;
+      }
+      g->k ^= s;
+      g->k |= d;
+      // g->white_move = !g->white_move;
+      return true;
+    } else {
+      // king move
+      for (size_t i = 0; i < 13; i++) {
+        if ((diagonals[i] & s) && (diagonals[i] & d)) {
+          uint32_t m = s;
+          if (s > d) {
+            while ((m ^ d) != 0) {
+              m = m >> 1;
+              // Obsticle
+              if ((g->wp | g->bp) & diagonals[i] & m) {
+                return false;
+              }
+            }
+          } else {
+            while ((m ^ d) != 0) {
+              m = m << 1;
+              // Obsticle
+              if ((g->wp | g->bp) & diagonals[i] & m) {
+                return false;
+              }
+            }
+          }
+          if (s & g->wp) {
+            g->wp ^= s;
+            g->wp |= d;
+          } else {
+            g->bp ^= s;
+            g->bp |= d;
+          }
+          g->k ^= s;
+          g->k |= d;
+          // g->white_move = !g->white_move;
+          return true;
+        }
+      }
+    }
+  } else {
+    if (g->white_move && (s & g->wp)) {
+      if (((d << 4) & s) || (((d & mask_r3) << 3) & s) ||
+          (((d & mask_r5) << 5) & s)) {
+        g->bp ^= s;
+        g->bp |= d;
+        // g->white_move = !g->white_move;
+        return true;
+      }
+    } else if (!g->white_move && (s & g->bp)) {
+      if (((d >> 4) & s) || (((d & mask_r3) >> 3) & s) ||
+          (((d & mask_r5) >> 5) & s)) {
+        g->bp ^= s;
+        g->bp |= d;
+        // g->white_move = !g->white_move;
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 void print_masks() {
