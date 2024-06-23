@@ -53,10 +53,10 @@ static uint32_t diagonals[NUM_DIAG];
 */
 
 void new_game(Game *game) {
-  game->wp = (0x60000000);
-  game->bp = (0x00000000);
-  game->k = 0x60000000;
-  game->white_move = true;
+  game->wp = 0x60000000;
+  game->bp = 0x00000006;
+  game->k = 0x60000006;
+  game->white_move = false;
   game->game_over = false;
 }
 
@@ -88,10 +88,10 @@ static void masks_init() {
   diagonals[11] = s[16] | s[20] | s[25] | s[29];
   diagonals[12] = s[24] | s[28];
 
-  printf("diagonals: \n");
-  for (size_t i = 0; i < NUM_DIAG; i++) {
-    PRINT_BITS(uint32_t, diagonals[i]);
-  }
+  //printf("diagonals: \n");
+  //for (size_t i = 0; i < NUM_DIAG; i++) {
+  //  PRINT_BITS(uint32_t, diagonals[i]);
+  //}
 }
 
 void checkers_init(void) { masks_init(); }
@@ -147,6 +147,29 @@ uint32_t get_white_jumpers(Game *g) {
   return jumpers;
 }
 
+uint32_t get_black_jumpers(Game *g) {
+  const uint32_t nooc = ~(g->wp | g->bp);
+  const uint32_t bk = g->bp & g->k;
+  uint32_t jumpers = 0;
+  uint32_t temp = (nooc >> 4) & g->wp;
+  if (temp) {
+    jumpers |= (((temp & mask_r3) >> 3) | ((temp & mask_r5) >> 5)) & g->bp;
+  }
+  temp = (((nooc & mask_r3) >> 3) | ((nooc & mask_r5) >> 5)) & g->wp;
+  jumpers |= (temp >> 4) & g->bp;
+  if (bk) {
+    temp = (nooc << 4) & g->wp;
+    if (temp) {
+      jumpers |= (((temp & mask_l3) << 3) | ((temp & mask_l5) << 5)) & bk;
+    }
+    temp = (((nooc & mask_l3) << 3) | ((nooc & mask_l5) << 5)) & g->wp;
+    if (temp) {
+      jumpers |= (temp << 4) & bk;
+    }
+  }
+  return jumpers;
+}
+
 bool move(Game *g, uint32_t s, uint32_t d) {
   const uint32_t nooc = ~(g->wp | g->bp);
   if (!(nooc & d)) {
@@ -173,7 +196,7 @@ bool move(Game *g, uint32_t s, uint32_t d) {
       }
       g->k ^= s;
       g->k |= d;
-      // g->white_move = !g->white_move;
+      g->white_move = !g->white_move;
       return true;
     } else {
       // king move
@@ -206,7 +229,7 @@ bool move(Game *g, uint32_t s, uint32_t d) {
           }
           g->k ^= s;
           g->k |= d;
-          // g->white_move = !g->white_move;
+          g->white_move = !g->white_move;
           return true;
         }
       }
@@ -217,7 +240,7 @@ bool move(Game *g, uint32_t s, uint32_t d) {
           (((d & mask_r5) << 5) & s)) {
         g->bp ^= s;
         g->bp |= d;
-        // g->white_move = !g->white_move;
+        g->white_move = !g->white_move;
         return true;
       }
     } else if (!g->white_move && (s & g->bp)) {
@@ -225,7 +248,7 @@ bool move(Game *g, uint32_t s, uint32_t d) {
           (((d & mask_r5) >> 5) & s)) {
         g->bp ^= s;
         g->bp |= d;
-        // g->white_move = !g->white_move;
+        g->white_move = !g->white_move;
         return true;
       }
     }

@@ -43,7 +43,7 @@ void draw_board(void) {
   wm = get_white_movers(&game);
   bm = get_black_movers(&game);
   wj = get_white_jumpers(&game);
-  // bj = get_black_jumpers(&game);
+  bj = get_black_jumpers(&game);
 
   for (int y = WIDTH - 100; y >= 0; y -= CELL_SIZE) {
     for (size_t x = 0; x < HEIGHT; x += CELL_SIZE) {
@@ -76,9 +76,9 @@ void draw_board(void) {
           if (bm & bitm) {
             DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, GREEN);
           }
-          // if (bj & bitm) {
-          //   DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, RED);
-          // }
+          if (bj & bitm) {
+            DrawCircle(x + CELL_SIZE / 2, y + CELL_SIZE / 2, 20, RED);
+          }
         }
         bitm = bitm << 1;
       }
