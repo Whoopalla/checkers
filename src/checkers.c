@@ -10,6 +10,8 @@
 #define DEBUG_MODE 0
 #define NUM_DIAG 13
 
+// Most of the code is stolen from https://3dkingdoms.com/checkers/bitboards.htm
+
 void print_masks();
 
 #define PRINT_BOARD(V)                                                         \
@@ -38,7 +40,6 @@ void print_board(char *val, unsigned char *bytes, size_t num_bytes) {
 
 static uint32_t mask_l3, mask_l5, mask_r3, mask_r5;
 static uint32_t s[32];
-
 static uint32_t diagonals[NUM_DIAG];
 
 /*
@@ -88,10 +89,10 @@ static void masks_init() {
   diagonals[11] = s[16] | s[20] | s[25] | s[29];
   diagonals[12] = s[24] | s[28];
 
-  //printf("diagonals: \n");
-  //for (size_t i = 0; i < NUM_DIAG; i++) {
-  //  PRINT_BITS(uint32_t, diagonals[i]);
-  //}
+  // printf("diagonals: \n");
+  // for (size_t i = 0; i < NUM_DIAG; i++) {
+  //   PRINT_BITS(uint32_t, diagonals[i]);
+  // }
 }
 
 void checkers_init(void) { masks_init(); }
