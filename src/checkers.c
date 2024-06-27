@@ -125,6 +125,203 @@ uint32_t get_black_movers(Game *g) {
   return movers;
 }
 
+uint32_t static iterate_diagonals(Game *g, uint32_t friends, uint32_t enemy,
+                                  size_t shift, bool sh_left) {
+  const uint32_t nooc = ~(g->wp | g->bp);
+  uint32_t temp, empty_space, jumpers, m;
+  if (shift == 4) {
+    temp = sh_left ? ((nooc << 4) & enemy) : ((nooc >> 4) & enemy);
+    empty_space = sh_left ? ((nooc >> 4) & enemy) : ((nooc << 4) & enemy);
+  } else if (shift == 3) {
+    temp = sh_left ? (((nooc & mask_l3) << 3) & enemy)
+                   : (((nooc & mask_r3) >> 3) & enemy);
+    empty_space = sh_left ? ((nooc >> 3) & enemy) : ((nooc << 3) & enemy);
+  } else if (shift == 5) {
+    temp = sh_left ? (((nooc & mask_l5) << 5) & enemy)
+                   : (((nooc & mask_r5) >> 5) & enemy);
+    empty_space = sh_left ? ((nooc >> 5) & enemy) : ((nooc << 5) & enemy);
+  } else {
+    assert(0 && "Are you sane?");
+  }
+  if (temp) {
+    for (size_t i = 0; i < NUM_DIAG; i++) {
+      if ((temp & diagonals[i]) && empty_space & diagonals[i]) {
+        m = sh_left ? 1 : 1 << 31;
+        for (size_t j = 0; j < 31; j++) {
+          if (temp & diagonals[i] & m) {
+            for (size_t k = 0; k < 31; k++) {
+              m = sh_left ? m << 1 : m >> 1;
+              if (diagonals[i] & m & friends) {
+                jumpers |= diagonals[i] & m & k;
+                goto next_diagonal9;
+              } else if (diagonals[i] & m & enemy) {
+                goto next_diagonal9;
+              }
+            }
+          }
+          m = sh_left ? m << 1 : m >> 1;
+        }
+      }
+    next_diagonal9:
+    }
+  }
+}
+
+uint32_t static get_flying_kings(Game *g, bool white) {
+  const uint32_t nooc = ~(g->wp | g->bp);
+  uint32_t k = white ? g->wp & k : g->bp & k;
+  uint32_t friends = white ? g->wp : g->bp;
+  uint32_t enemy = white ? g->bp : g->wp;
+  uint32_t temp, jumpers;
+  uint32_t m = 1;
+  temp = (nooc << 4) & g->bp;
+  if (temp) {
+    for (size_t i = 0; i < NUM_DIAG; i++) {
+      if ((temp & diagonals[i]) && (temp >> 4) & diagonals[i]) {
+        m = 1;
+        for (size_t j = 0; j < 31; j++) {
+          if (temp & diagonals[i] & m) {
+            for (size_t k = 0; k < 31; k++) {
+              m = m << 1;
+              if (diagonals[i] & m & friends) {
+                jumpers |= diagonals[i] & m & k;
+                goto next_diagonal;
+              } else if (diagonals[i] & m & enemy) {
+                goto next_diagonal;
+              }
+            }
+          }
+          m = m << 1;
+        }
+      }
+    next_diagonal:
+    }
+  }
+  // << 3
+  temp = ((nooc & mask_l3) << 3) & g->bp;
+  if (temp) {
+    for (size_t i = 0; i < NUM_DIAG; i++) {
+      if ((temp & diagonals[i]) && (temp >> 3) & diagonals[i]) {
+        m = 1;
+        for (size_t j = 0; j < 31; j++) {
+          if (temp & diagonals[i] & m) {
+            for (size_t k = 0; k < 31; k++) {
+              m = m << 1;
+              if (diagonals[i] & m & friends) {
+                jumpers |= diagonals[i] & m & k;
+                goto next_diagonal1;
+              } else if (diagonals[i] & m & enemy) {
+                goto next_diagonal1;
+              }
+            }
+          }
+          m = m << 1;
+        }
+      }
+    next_diagonal1:
+    }
+  }
+  // << 5
+  temp = ((nooc & mask_l5) << 5) & g->bp;
+  if (temp) {
+    for (size_t i = 0; i < NUM_DIAG; i++) {
+      if ((temp & diagonals[i]) && (temp >> 5) & diagonals[i]) {
+        m = 1;
+        for (size_t j = 0; j < 31; j++) {
+          if (temp & diagonals[i] & m) {
+            for (size_t k = 0; k < 31; k++) {
+              m = m << 1;
+              if (diagonals[i] & m & friends) {
+                jumpers |= diagonals[i] & m & k;
+                goto next_diagonal2;
+              } else if (diagonals[i] & m & enemy) {
+                goto next_diagonal2;
+              }
+            }
+          }
+          m = m << 1;
+        }
+      }
+    next_diagonal2:
+    }
+  }
+
+  // >> 4
+  m = 1 << 31;
+  temp = (nooc >> 4) & g->bp;
+  if (temp) {
+    for (size_t i = 0; i < NUM_DIAG; i++) {
+      if ((temp & diagonals[i]) && (temp << 4) & diagonals[i]) {
+        m = 1 << 31;
+        for (size_t j = 0; j < 31; j++) {
+          if (temp & diagonals[i] & m) {
+            for (size_t k = 0; k < 31; k++) {
+              m = m >> 1;
+              if (diagonals[i] & m & g->wp) {
+                jumpers |= diagonals[i] & m & k;
+                goto next_diagonal;
+              } else if (diagonals[i] & m & g->bp) {
+                goto next_diagonal;
+              }
+            }
+          }
+          m = m << 1;
+        }
+      }
+    next_diagonal:
+    }
+  }
+  // << 3
+  temp = ((nooc & mask_l3) << 3) & g->bp;
+  if (temp) {
+    for (size_t i = 0; i < NUM_DIAG; i++) {
+      if ((temp & diagonals[i]) && (temp >> 3) & diagonals[i]) {
+        m = 1;
+        for (size_t j = 0; j < 31; j++) {
+          if (temp & diagonals[i] & m) {
+            for (size_t k = 0; k < 31; k++) {
+              m = m << 1;
+              if (diagonals[i] & m & g->wp) {
+                jumpers |= diagonals[i] & m & k;
+                goto next_diagonal1;
+              } else if (diagonals[i] & m & g->bp) {
+                goto next_diagonal1;
+              }
+            }
+          }
+          m = m << 1;
+        }
+      }
+    next_diagonal1:
+    }
+  }
+  // << 5
+  temp = ((nooc & mask_l5) << 5) & g->bp;
+  if (temp) {
+    for (size_t i = 0; i < NUM_DIAG; i++) {
+      if ((temp & diagonals[i]) && (temp >> 5) & diagonals[i]) {
+        m = 1;
+        for (size_t j = 0; j < 31; j++) {
+          if (temp & diagonals[i] & m) {
+            for (size_t k = 0; k < 31; k++) {
+              m = m << 1;
+              if (diagonals[i] & m & g->wp) {
+                jumpers |= diagonals[i] & m & k;
+                goto next_diagonal2;
+              } else if (diagonals[i] & m & g->bp) {
+                goto next_diagonal2;
+              }
+            }
+          }
+          m = m << 1;
+        }
+      }
+    next_diagonal2:
+    }
+  }
+  return jumpers;
+}
+
 uint32_t get_white_jumpers(Game *g) {
   const uint32_t nooc = ~(g->wp | g->bp);
   const uint32_t wk = g->wp & g->k;
@@ -136,13 +333,78 @@ uint32_t get_white_jumpers(Game *g) {
   temp = (((nooc & mask_l3) << 3) | ((nooc & mask_l5) << 5)) & g->bp;
   jumpers |= (temp << 4) & g->wp;
   if (wk) {
-    temp = (nooc >> 4) & g->bp;
+    // << 4
+    uint32_t m = 1;
+    temp = (nooc << 4) & g->bp;
     if (temp) {
-      jumpers |= (((temp & mask_r3) >> 3) | ((temp & mask_r5) >> 5)) & wk;
+      for (size_t i = 0; i < NUM_DIAG; i++) {
+        if ((temp & diagonals[i]) && (temp >> 4) & diagonals[i]) {
+          m = 1;
+          for (size_t j = 0; j < 31; j++) {
+            if (temp & diagonals[i] & m) {
+              for (size_t k = 0; k < 31; k++) {
+                m = m << 1;
+                if (diagonals[i] & m & g->wp) {
+                  jumpers |= diagonals[i] & m & wk;
+                  goto next_diagonal;
+                } else if (diagonals[i] & m & g->bp) {
+                  goto next_diagonal;
+                }
+              }
+            }
+            m = m << 1;
+          }
+        }
+      next_diagonal:
+      }
     }
-    temp = (((nooc & mask_r3) >> 3) | ((nooc & mask_r5) >> 5)) & g->bp;
+    // << 3
+    temp = ((nooc & mask_l3) << 3) & g->bp;
     if (temp) {
-      jumpers |= (temp >> 4) & wk;
+      for (size_t i = 0; i < NUM_DIAG; i++) {
+        if ((temp & diagonals[i]) && (temp >> 3) & diagonals[i]) {
+          m = 1;
+          for (size_t j = 0; j < 31; j++) {
+            if (temp & diagonals[i] & m) {
+              for (size_t k = 0; k < 31; k++) {
+                m = m << 1;
+                if (diagonals[i] & m & g->wp) {
+                  jumpers |= diagonals[i] & m & wk;
+                  goto next_diagonal1;
+                } else if (diagonals[i] & m & g->bp) {
+                  goto next_diagonal1;
+                }
+              }
+            }
+            m = m << 1;
+          }
+        }
+      next_diagonal1:
+      }
+    }
+    // << 5
+    temp = ((nooc & mask_l5) << 5) & g->bp;
+    if (temp) {
+      for (size_t i = 0; i < NUM_DIAG; i++) {
+        if ((temp & diagonals[i]) && (temp >> 5) & diagonals[i]) {
+          m = 1;
+          for (size_t j = 0; j < 31; j++) {
+            if (temp & diagonals[i] & m) {
+              for (size_t k = 0; k < 31; k++) {
+                m = m << 1;
+                if (diagonals[i] & m & g->wp) {
+                  jumpers |= diagonals[i] & m & wk;
+                  goto next_diagonal2;
+                } else if (diagonals[i] & m & g->bp) {
+                  goto next_diagonal2;
+                }
+              }
+            }
+            m = m << 1;
+          }
+        }
+      next_diagonal2:
+      }
     }
   }
   return jumpers;
